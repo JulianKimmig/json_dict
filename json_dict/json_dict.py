@@ -2,7 +2,7 @@ import json
 
 
 class JsonDict:
-    def __init__(self, file=None, data=None,createfile=False,autosave=False):
+    def __init__(self, file=None, data=None,createfile=True,autosave=True):
         self.file = None
         self.autosave = autosave
         if data is not None:
@@ -16,7 +16,7 @@ class JsonDict:
         if file is not None:
             self.read(file,createfile=createfile)
 
-    def get(self, *args, default=None):
+    def get(self, *args, default=None, autosave=True):
         d = self.data
         args=[str(arg) for arg in args]
         for arg in args[:-1]:
@@ -26,7 +26,7 @@ class JsonDict:
             d = d[arg]
 
         if args[-1] not in d:
-            self.put(*args, value=default)
+            self.put(*args, value=default,autosave=autosave)
 
         return d[args[-1]]
 
@@ -38,10 +38,8 @@ class JsonDict:
         except Exception as e:
             if createfile:
                 with open(file,"w+") as f:
-                    f.write("{}")
+                    self.save(file=file)
                 self.read(file,createfile=False)
-            else:
-                self.data = {}
 
     def stringify_keys(self,diction=None):
         if diction is None:
