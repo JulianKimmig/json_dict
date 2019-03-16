@@ -2,7 +2,7 @@ import json
 
 
 class JsonDict:
-    def __init__(self, file=None, data=None,createfile=True,autosave=True):
+    def __init__(self, file=None, data=None, createfile=True, autosave=True):
         self.file = None
         self.autosave = autosave
         if data is not None:
@@ -14,38 +14,38 @@ class JsonDict:
             data = {}
         self.data = data
         if file is not None:
-            self.read(file,createfile=createfile)
+            self.read(file, createfile=createfile)
 
     def get(self, *args, default=None, autosave=True):
         d = self.data
-        args=[str(arg) for arg in args]
+        args = [str(arg) for arg in args]
         for arg in args[:-1]:
-            arg =  str(arg)
+            arg = str(arg)
             if arg not in d:
                 d[arg] = {}
             d = d[arg]
 
         if args[-1] not in d:
-            self.put(*args, value=default,autosave=autosave)
+            self.put(*args, value=default, autosave=autosave)
 
         return d[args[-1]]
 
-    def read(self, file,createfile=False):
+    def read(self, file, createfile=False):
         try:
             with open(file) as f:
                 self.file = file
                 self.data = json.loads(f.read())
         except Exception as e:
             if createfile:
-                with open(file,"w+") as f:
+                with open(file, "w+") as f:
                     self.save(file=file)
-                self.read(file,createfile=False)
+                self.read(file, createfile=False)
 
-    def stringify_keys(self,diction=None):
+    def stringify_keys(self, diction=None):
         if diction is None:
             diction = self.data
         for k in list(diction.keys()):
-            if isinstance(diction[k],dict):
+            if isinstance(diction[k], dict):
                 self.stringify_keys(diction=diction[k])
             diction[str(k)] = diction.pop(k)
 
@@ -63,7 +63,7 @@ class JsonDict:
     def put(self, *args, value, autosave=True):
         d = self.data
         for arg in args[:-1]:
-            arg=str(arg)
+            arg = str(arg)
             if arg not in d:
                 d[arg] = {}
             d = d[arg]
