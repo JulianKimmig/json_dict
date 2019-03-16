@@ -17,7 +17,7 @@ setup = dict(name='Json_Dict',
                  "License :: OSI Approved :: MIT License",
                  "Operating System :: OS Independent",
              ])
-
-setuptools.setup(
-**setup
-)
+if __name__ == "__main__":
+    setuptools.setup(
+        **setup
+    )
