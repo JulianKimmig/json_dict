@@ -1,4 +1,5 @@
 import json
+import os
 
 
 class JsonDict:
@@ -33,7 +34,7 @@ class JsonDict:
     def read(self, file, createfile=False):
         try:
             with open(file) as f:
-                self.file = file
+                self.file = os.path.abspath(file)
                 self.data = json.loads(f.read())
         except Exception as e:
             if createfile:
@@ -51,7 +52,7 @@ class JsonDict:
 
     def save(self, file=None):
         if file is not None:
-            self.file = file
+            self.file = os.path.abspath(file)
         if self.file is not None:
             with open(self.file, "w+") as outfile:
                 self.stringify_keys()
