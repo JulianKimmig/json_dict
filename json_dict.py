@@ -38,8 +38,8 @@ class JsonDict:
                 self.data = json.loads(f.read())
         except Exception as e:
             if createfile:
-                with open(file, "w+") as f:
-                    self.save(file=file)
+                os.makedirs(os.path.dirname(file),exist_ok=True)
+                self.save(file=file)
                 self.read(file, createfile=False)
 
     def stringify_keys(self, diction=None):
@@ -86,3 +86,43 @@ class JsonDict:
 
     def __getitem__(self, key):
         return self.data.get(key)
+
+    def getsubdict(self, preamble=None):
+        if preamble is None:
+            preamble = []
+        return JsonSubDict(parent=self,preamble=preamble)
+
+
+class JsonSubDict():
+    def __init__(self,parent,preamble):
+        self.preamble = preamble
+        self.parent = parent
+        self.parent.get(*self.preamble,default={})
+        self.save = self.parent.save
+
+    file = property(lambda self:self.parent.file)
+
+    def get(self, *args, default=None, autosave=True):
+        return self.parent.get(*(self.preamble+list(args)),default=default,autosave=autosave)
+
+    def put(self, *args, value, autosave=True):
+        self.parent.put(*(self.preamble+list(args)),value=value,autosave=autosave)
+
+    def to_json(self):
+        d = self.parent.data
+        for p in self.preamble:
+            d=d[p]
+        return json.dumps(d)
+
+    def __getitem__(self, key):
+        d = self.parent.data
+        for p in self.preamble:
+            d=d[p]
+        return d.get(key)
+
+    def getsubdict(self, preamble=None):
+        if preamble is None:
+            preamble = []
+        preamble = self.preamble + preamble
+        return JsonSubDict(parent=self.parent,preamble=preamble)
+
