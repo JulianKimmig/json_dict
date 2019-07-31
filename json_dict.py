@@ -1,9 +1,36 @@
 import json
 import os
 
+NUMPY_AVAILABLE = 0
+try:
+    import numpy as np
+
+    NUMPY_AVAILABLE = 1
+except:
+    pass
+
+
+class JsonMultiEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if NUMPY_AVAILABLE:
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+
+            if isinstance(obj, np.number):
+                return obj.item()
+
+        return json.JSONEncoder.default(self, obj)
+
 
 class JsonDict:
-    def __init__(self, file=None, data=None, createfile=True, autosave=True):
+    def __init__(
+        self,
+        file=None,
+        data=None,
+        createfile=True,
+        autosave=True,
+        encoder=JsonMultiEncoder,
+    ):
         self.file = None
         self.autosave = autosave
         if data is not None:
@@ -14,6 +41,7 @@ class JsonDict:
         else:
             data = {}
         self.data = data
+        self.encoder = encoder
         if file is not None:
             self.read(file, createfile=createfile)
 
@@ -38,7 +66,7 @@ class JsonDict:
                 self.data = json.loads(f.read())
         except Exception as e:
             if createfile:
-                os.makedirs(os.path.dirname(file),exist_ok=True)
+                os.makedirs(os.path.dirname(file), exist_ok=True)
                 self.save(file=file)
                 self.read(file, createfile=False)
 
@@ -56,10 +84,12 @@ class JsonDict:
         if self.file is not None:
             with open(self.file, "w+") as outfile:
                 self.stringify_keys()
-                json.dump(self.data, outfile, indent=4, sort_keys=True)
+                json.dump(
+                    self.data, outfile, indent=4, sort_keys=True, cls=self.encoder
+                )
 
     def to_json(self):
-        return json.dumps(self.data)
+        return json.dumps(self.data, cls=self.encoder)
 
     def put(self, *args, value, autosave=True):
         d = self.data
@@ -90,39 +120,40 @@ class JsonDict:
     def getsubdict(self, preamble=None):
         if preamble is None:
             preamble = []
-        return JsonSubDict(parent=self,preamble=preamble)
+        return JsonSubDict(parent=self, preamble=preamble)
 
 
-class JsonSubDict():
-    def __init__(self,parent,preamble):
+class JsonSubDict:
+    def __init__(self, parent, preamble):
         self.preamble = preamble
         self.parent = parent
-        self.parent.get(*self.preamble,default={})
+        self.parent.get(*self.preamble, default={})
         self.save = self.parent.save
 
-    file = property(lambda self:self.parent.file)
+    file = property(lambda self: self.parent.file)
 
     def get(self, *args, default=None, autosave=True):
-        return self.parent.get(*(self.preamble+list(args)),default=default,autosave=autosave)
+        return self.parent.get(
+            *(self.preamble + list(args)), default=default, autosave=autosave
+        )
 
     def put(self, *args, value, autosave=True):
-        self.parent.put(*(self.preamble+list(args)),value=value,autosave=autosave)
+        self.parent.put(*(self.preamble + list(args)), value=value, autosave=autosave)
 
     def to_json(self):
         d = self.parent.data
         for p in self.preamble:
-            d=d[p]
-        return json.dumps(d)
+            d = d[p]
+        return json.dumps(d, cls=self.parent.encoder)
 
     def __getitem__(self, key):
         d = self.parent.data
         for p in self.preamble:
-            d=d[p]
+            d = d[p]
         return d.get(key)
 
     def getsubdict(self, preamble=None):
         if preamble is None:
             preamble = []
         preamble = self.preamble + preamble
-        return JsonSubDict(parent=self.parent,preamble=preamble)
-
+        return JsonSubDict(parent=self.parent, preamble=preamble)
