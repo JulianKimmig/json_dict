@@ -19,8 +19,13 @@ class JsonMultiEncoder(json.JSONEncoder):
             if isinstance(obj, np.number):
                 return obj.item()
 
-        return json.JSONEncoder.default(self, obj)
+        if isinstance(obj,set):
+            return list(obj)
 
+        try:
+            return json.JSONEncoder.default(self, obj)
+        except TypeError:
+            return str(obj)
 
 class JsonDict:
     def __init__(
@@ -122,6 +127,8 @@ class JsonDict:
             preamble = []
         return JsonSubDict(parent=self, preamble=preamble)
 
+    def get_parent(self,highest=True):
+        return self
 
 class JsonSubDict:
     def __init__(self, parent, preamble):
@@ -131,6 +138,11 @@ class JsonSubDict:
         self.save = self.parent.save
 
     file = property(lambda self: self.parent.file)
+
+    def get_parent(self,highest=True):
+        if not highest:
+            return self.parent
+        return self.parent.get_parent(highest=highest)
 
     def get(self, *args, default=None, autosave=True):
         return self.parent.get(
