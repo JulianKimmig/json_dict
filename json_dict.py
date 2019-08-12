@@ -176,7 +176,7 @@ class AbstractJsonDict():
 
 
 class JsonDict(AbstractJsonDict):
-    def __init__(self, data=None, file=None, createfile=True, *args, **kwargs):
+    def __init__(self,file=None, data=None, createfile=True, *args, **kwargs):
         if data is not None:
             if isinstance(data, str):
                 data = json.loads(data)
@@ -245,13 +245,11 @@ class JsonSubDict(AbstractJsonDict):
         self.parent.get(*self.preamble, default={})
 
     def get(self, *args, default=None, autosave=True):
-        print(self.preamble + list(args),default)
         return self.parent.get(
             *(self.preamble + list(args)), default=default, autosave=autosave
         )
 
     def put(self, *args, value):
-        print(self.preamble + list(args))
         self.parent.put(*(self.preamble + list(args)), value=value)
 
 
