@@ -9,7 +9,6 @@ try:
 except:
     pass
 
-
 class JsonMultiEncoder(json.JSONEncoder):
     def default(self, obj):
         if NUMPY_AVAILABLE:
@@ -17,6 +16,8 @@ class JsonMultiEncoder(json.JSONEncoder):
                 return obj.tolist()
 
             if isinstance(obj, np.number):
+                if (obj.itemsize>6):
+                    return str(obj.item())
                 return obj.item()
 
         if isinstance(obj, set):
@@ -176,13 +177,13 @@ class AbstractJsonDict():
 
 
 class JsonDict(AbstractJsonDict):
-    def __init__(self,file=None, data=None, createfile=True, *args, **kwargs):
+    def __init__(self,file=None, data=None, createfile=True,autosave=True, *args, **kwargs):
         if data is not None:
             if isinstance(data, str):
                 data = json.loads(data)
             elif isinstance(data, JsonDict):
                 data = data.data
-        super().__init__(data=data, *args, **kwargs)
+        super().__init__(data=data,autosave=autosave, *args, **kwargs)
 
         if file is not None:
             self.read(file, createfile=createfile)
