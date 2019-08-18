@@ -9,6 +9,7 @@ try:
 except:
     pass
 
+
 class JsonMultiEncoder(json.JSONEncoder):
     def default(self, obj):
         if NUMPY_AVAILABLE:
@@ -16,7 +17,7 @@ class JsonMultiEncoder(json.JSONEncoder):
                 return obj.tolist()
 
             if isinstance(obj, np.number):
-                if (obj.itemsize>6):
+                if obj.itemsize > 6:
                     return str(obj.item())
                 return obj.item()
 
@@ -29,7 +30,7 @@ class JsonMultiEncoder(json.JSONEncoder):
             return str(obj)
 
 
-class AbstractJsonDict():
+class AbstractJsonDict:
     def __init__(self, data=None, autosave=False, encoder=JsonMultiEncoder):
         if encoder is None:
             encoder = JsonMultiEncoder
@@ -73,11 +74,13 @@ class AbstractJsonDict():
 
     def _set_encoder(self, encoder):
         self._encoder = encoder
+
     def _get_encoder(self):
         return self._encoder
 
     def set_encoder(self, encoder):
         self._set_encoder(encoder)
+
     def get_encoder(self):
         return self._get_encoder()
 
@@ -157,7 +160,9 @@ class AbstractJsonDict():
             diction[str(k)] = diction.pop(k)
 
     def to_json(self, indent=None, sort_keys=False):
-        return json.dumps(self.data, cls=self.encoder, indent=indent, sort_keys=sort_keys)
+        return json.dumps(
+            self.data, cls=self.encoder, indent=indent, sort_keys=sort_keys
+        )
 
     def get_base_dict(self):
         return self.get_parent(highest=True)
@@ -177,13 +182,15 @@ class AbstractJsonDict():
 
 
 class JsonDict(AbstractJsonDict):
-    def __init__(self,file=None, data=None, createfile=True,autosave=True, *args, **kwargs):
+    def __init__(
+        self, file=None, data=None, createfile=True, autosave=True, *args, **kwargs
+    ):
         if data is not None:
             if isinstance(data, str):
                 data = json.loads(data)
             elif isinstance(data, JsonDict):
                 data = data.data
-        super().__init__(data=data,autosave=autosave, *args, **kwargs)
+        super().__init__(data=data, autosave=autosave, *args, **kwargs)
 
         if file is not None:
             self.read(file, createfile=createfile)
@@ -215,7 +222,6 @@ class JsonDict(AbstractJsonDict):
 
 
 class JsonSubDict(AbstractJsonDict):
-
     def _set_data(self, data):
         assert isinstance(data, dict), "data is not a dictionary"
         self.parent.put(*self.preamble, value=data)
@@ -265,7 +271,7 @@ if __name__ == "__main__":
     d2.put("sub_", value="folder")
     print(d1)
     print(d2.data)
-    d3=d2.getsubdict(["sub","dic"])
+    d3 = d2.getsubdict(["sub", "dic"])
     print(d2)
     print(d1)
     print(d3.get_base_dict())
