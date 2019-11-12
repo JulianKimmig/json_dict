@@ -59,9 +59,11 @@ class AbstractJsonDict:
             elif overwrite:
                 target[key] = value
 
-    def update_data(self,dict_like,overwrite=True):
+    def update_data(self,dict_like,overwrite=True, autosave=True):
         assert isinstance(dict_like,dict), dict_like.__class__.__name__+" is not a dict object"
         self._update_data(self.data,dict_like,overwrite=overwrite)
+        if self.autosave and autosave:
+            self.save()
 
 
 
