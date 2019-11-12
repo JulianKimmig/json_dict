@@ -50,6 +50,21 @@ class AbstractJsonDict:
     def _get_data(self):
         return self._data
 
+    def _update_data(self,target,source,overwrite=True):
+        for key, value in source.items():
+            if not key in target:
+                target[key] = value
+            elif isinstance(target.get(key),dict) and isinstance(value,dict):
+                self._update_data(target.get(key),value,overwrite=overwrite)
+            elif overwrite:
+                target[key] = value
+
+    def update_data(self,dict_like,overwrite=True):
+        assert isinstance(dict_like,dict), dict_like.__class__.__name__+" is not a dict object"
+        self._update_data(self.data,dict_like,overwrite=overwrite)
+
+
+
     def set_data(self, data):
         self._set_data(data)
 
