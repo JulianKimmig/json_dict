@@ -130,13 +130,16 @@ class AbstractJsonDict:
             arg = str(arg)
             if arg not in d and autosave:
                 d[arg] = {}
-            else:
+            elif not autosave:
+                print("ddddd", args, default,self.data)
                 return default
             d = d[arg]
 
+
         if args[-1] not in d and autosave:
             self.put(*args, value=default, autosave=autosave)
-        else:
+        elif not autosave:
+            print("eeeee", args, default,self.data)
             return default
 
         return d[args[-1]]
