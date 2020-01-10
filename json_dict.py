@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 
@@ -140,7 +141,12 @@ class AbstractJsonDict:
         elif not autosave:
             return default
 
-        return d[args[-1]]
+        o = d[args[-1]]
+        try:
+            o = copy.deepcopy(o)
+        except:
+            pass
+        return o
 
     def put(self, *args, value, autosave=True):
         d = self.data
