@@ -1,6 +1,8 @@
 import copy
 import json
 import os
+from json import JSONDecodeError
+from shutil import copyfile
 
 NUMPY_AVAILABLE = 0
 try:
@@ -32,9 +34,10 @@ class JsonMultiEncoder(json.JSONEncoder):
 
 
 class AbstractJsonDict:
-    def __init__(self, data=None, autosave=False, encoder=JsonMultiEncoder):
+    def __init__(self, data=None, autosave=False, encoder=JsonMultiEncoder,backup = True):
         if encoder is None:
             encoder = JsonMultiEncoder
+        self.backup=backup
         self._encoder = None
         self.encoder = encoder
         self._autosave = autosave
@@ -177,6 +180,8 @@ class AbstractJsonDict:
             with open(self.file, "w+") as outfile:
                 self.stringify_keys()
                 outfile.write(self.to_json(indent=4, sort_keys=True))
+            if self.backup:
+                copyfile(self.file,  self.file + "_bu")
 
     def __getitem__(self, key):
         return self.data.get(key)
@@ -213,7 +218,8 @@ class AbstractJsonDict:
 
 class JsonDict(AbstractJsonDict):
     def __init__(
-        self, file=None, data=None, createfile=True, autosave=True, *args, **kwargs
+        self, file=None, data=None, createfile=True, autosave=True, *args, **kwargs,
+
     ):
         if data is not None:
             if isinstance(data, str):
@@ -229,7 +235,10 @@ class JsonDict(AbstractJsonDict):
         try:
             super().read(file)
             self.file = os.path.abspath(file)
-        except Exception as e:
+        except JSONDecodeError:
+            super().read(file+"_bu")
+            self.file = os.path.abspath(file)
+        except FileNotFoundError as e:
             if createfile:
                 os.makedirs(os.path.dirname(file), exist_ok=True)
                 self.save(file=file)
