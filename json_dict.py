@@ -232,13 +232,15 @@ class JsonDict(AbstractJsonDict):
             self.read(file, createfile=createfile)
 
     def read(self, file, createfile=False):
+        if file:
+            file = os.path.abspath(file)
         try:
             super().read(file)
             self.file = os.path.abspath(file)
         except JSONDecodeError:
             super().read(file+"_bu")
             self.file = os.path.abspath(file)
-        except FileNotFoundError as e:
+        except (FileNotFoundError,JSONDecodeError) as e:
             if createfile:
                 os.makedirs(os.path.dirname(file), exist_ok=True)
                 self.save(file=file)
