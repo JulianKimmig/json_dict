@@ -12,6 +12,7 @@ try:
 except:
     pass
 
+VERBOSE=False
 
 class JsonMultiEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -34,7 +35,8 @@ class JsonMultiEncoder(json.JSONEncoder):
 
 
 class AbstractJsonDict:
-    def __init__(self, data=None, autosave=False, encoder=JsonMultiEncoder,backup = True):
+    def __init__(self, data=None, autosave=False, encoder=JsonMultiEncoder,backup = True,check_timestamp=True):
+        self.check_timestamp = check_timestamp
         if encoder is None:
             encoder = JsonMultiEncoder
         self.backup=backup
@@ -43,6 +45,7 @@ class AbstractJsonDict:
         self._autosave = autosave
         self._data = {}
         self._file = None
+        self.timestamp=0
         if data is not None:
             self.data = data
         if autosave:
@@ -82,6 +85,8 @@ class AbstractJsonDict:
     data = property(get_data, set_data)
 
     def _set_file(self, file):
+        if self.check_timestamp:
+            self.timestamp = os.path.getmtime(file)
         self._file = file
 
     def _get_file(self):
@@ -124,10 +129,19 @@ class AbstractJsonDict:
     autosave = property(get_autosave, set_autosave)
 
     def read(self, file):
+        if VERBOSE:
+            print("read file",file)
         with open(file) as f:
             self.data = json.loads(f.read())
 
     def get(self, *args, default=None, autosave=True):
+        if self.check_timestamp:
+            if self.file:
+                if os.path.getmtime(self.file) > self.timestamp:
+                    if VERBOSE:
+                        print("relaod file", self.file)
+                    self.read(self.file)
+
         d = self.data
         args = [str(arg) for arg in args]
         for arg in args[:-1]:
@@ -152,6 +166,12 @@ class AbstractJsonDict:
         return o
 
     def put(self, *args, value, autosave=True):
+        if self.check_timestamp:
+            if self.file:
+                if os.path.getmtime(self.file) > self.timestamp:
+                    if VERBOSE:
+                        print("relaod file", self.file)
+                    self.read(self.file)
         d = self.data
         for arg in args[:-1]:
             arg = str(arg)
@@ -177,6 +197,8 @@ class AbstractJsonDict:
     def save(self):
         assert self.file is not None, "no file specified"
         if self.file is not None:
+            if VERBOSE:
+                print("save file",self.file)
             with open(self.file, "w+") as outfile:
                 self.stringify_keys()
                 outfile.write(self.to_json(indent=4, sort_keys=True))
