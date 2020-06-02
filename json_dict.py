@@ -205,6 +205,8 @@ class AbstractJsonDict:
                 outfile.write(self.to_json(indent=4, sort_keys=True))
             if self.backup:
                 copyfile(self.file,  self.file + "_bu")
+            if self.check_timestamp:
+                self.timestamp = os.path.getmtime(self.file)
 
     def __getitem__(self, key):
         return self.data.get(key)
