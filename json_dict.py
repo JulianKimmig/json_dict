@@ -86,7 +86,8 @@ class AbstractJsonDict:
 
     def _set_file(self, file):
         if self.check_timestamp:
-            self.timestamp = os.path.getmtime(file)
+            if os.path.exists(file):
+                self.timestamp = os.path.getmtime(file)
         self._file = file
 
     def _get_file(self):
