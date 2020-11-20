@@ -46,9 +46,16 @@ class DictTest(unittest.TestCase):
     def test_double_open_file(self):
         d2=JsonDict(self.d.file,backup=False)
         d2.put("second_entry",value=1)
-        print(self.d)
-        print(d2)
+        assert len(d2.data.keys()) == len(self.d.data.keys())
 
+    def test_list(self):
+        self.d.put("list",value=[0,1,2])
+        l: json_dict.JsonList =self.d.get("list")
+        l[1]=10
+        l.reverse()
+        assert all([l[i]==k for i,k in enumerate([2,10,0])]), str(l)
+        assert l.pop(-1) == 0
+        assert all([l[i]==k for i,k in enumerate([2,10])]), str(l)
 
 
 if __name__ == '__main__':

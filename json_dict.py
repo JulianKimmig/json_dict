@@ -35,6 +35,7 @@ class JsonMultiEncoder(json.JSONEncoder):
             return str(obj)
 
 
+
 class AbstractJsonDict:
     def __init__(self, data=None, autosave=False, encoder=JsonMultiEncoder, backup=True, check_timestamp=True,
                  check_filesize=True):
@@ -168,6 +169,8 @@ class AbstractJsonDict:
 
         if isinstance(o, dict) and as_json_dict:
             return self.getsubdict(*args)
+        if isinstance(o, list) and as_json_dict:
+            return JsonList(preamble=args,jsondict=self)
         try:
             o = copy.deepcopy(o)
         except:
@@ -359,6 +362,34 @@ class JsonSubDict(AbstractJsonDict):
     def put(self, *args, value, **kwargs):
         return self.parent.put(*(self.preamble + list(args)), value=value, **kwargs)
 
+class JsonList():
+    def __init__(self,preamble,jsondict:JsonDict):
+        self._jsondict = jsondict
+        self._preamble=preamble
+
+    @property
+    def list(self):
+        return list(self._jsondict.get(*self._preamble, as_json_dict=False))
+
+    def __getitem__(self, item):
+        return self.list[item]
+
+    def __setitem__(self, key, value):
+        l=self.list
+        l[key]=value
+        self._jsondict.put(*self._preamble,value=l)
+
+    def __len__(self):
+        return len(self.list)
+
+    def __getattr__(self, item):
+        l=self.list
+        attr=getattr(l,item)
+        self._jsondict.put(*self._preamble,value=l)
+        return attr
+
+    def __str__(self):
+        return str(self.list)
 
 if __name__ == "__main__":
     d1 = JsonDict('{"test":[1,2.5,{}]}')
