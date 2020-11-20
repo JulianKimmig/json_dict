@@ -9,9 +9,6 @@ setup = dict(
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     py_modules=["json_dict"],
-    entry_points="""
-             [console_scripts]
-             json_dict=json_dict:json_dict""",
     url="https://github.com/JulianKimmig/json_dict",
     # packages=setuptools.find_packages(),
     classifiers=[
