@@ -12,7 +12,8 @@ try:
 except:
     pass
 
-VERBOSE=False
+VERBOSE = False
+
 
 class JsonMultiEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -35,17 +36,19 @@ class JsonMultiEncoder(json.JSONEncoder):
 
 
 class AbstractJsonDict:
-    def __init__(self, data=None, autosave=False, encoder=JsonMultiEncoder,backup = True,check_timestamp=True):
+    def __init__(self, data=None, autosave=False, encoder=JsonMultiEncoder, backup=True, check_timestamp=True,
+                 check_filesize=True):
+
+        self.check_filesize = check_filesize
         self.check_timestamp = check_timestamp
         if encoder is None:
             encoder = JsonMultiEncoder
-        self.backup=backup
+        self.backup = backup
         self._encoder = None
         self.encoder = encoder
         self._autosave = autosave
         self._data = {}
         self._file = None
-        self.timestamp=0
         if data is not None:
             self.data = data
         if autosave:
@@ -54,40 +57,48 @@ class AbstractJsonDict:
     def _set_data(self, data):
         self._data = data
 
-    def _get_data(self):
+    def _get_data(self, reload=True):
+        if self.file and reload:
+            if self.check_timestamp or self.check_filesize:
+                if (self.check_timestamp and os.path.getmtime(self.file) > self._timestamp) or \
+                        (self.check_filesize and os.path.getsize(self.file) != self._file_size and os.path.getsize(self.file) > 0):
+                    if VERBOSE:
+                        print("relaod file", self.file)
+                    self.read(self.file)
         return self._data
 
-    def _update_data(self,target,source,overwrite=True):
+    def _update_data(self, target, source, overwrite=True):
         for key, value in source.items():
             if not key in target:
                 target[key] = value
-            elif isinstance(target.get(key),dict) and isinstance(value,dict):
-                self._update_data(target.get(key),value,overwrite=overwrite)
+            elif isinstance(target.get(key), dict) and isinstance(value, dict):
+                self._update_data(target.get(key), value, overwrite=overwrite)
             elif overwrite:
                 target[key] = value
 
-    def update_data(self,dict_like,overwrite=True, autosave=True):
-        if isinstance(dict_like,AbstractJsonDict):
+    def update_data(self, dict_like, overwrite=True, autosave=True):
+        if isinstance(dict_like, AbstractJsonDict):
             dict_like = dict_like.data
-        assert isinstance(dict_like,dict), dict_like.__class__.__name__+" is not a dict object"
-        self._update_data(self.data,dict_like,overwrite=overwrite)
+        assert isinstance(dict_like, dict), dict_like.__class__.__name__ + " is not a dict object"
+        self._update_data(self.data, dict_like, overwrite=overwrite)
         if self.autosave and autosave:
             self.save()
-
-
 
     def set_data(self, data):
         self._set_data(data)
 
-    def get_data(self):
-        return self._get_data()
+    def get_data(self, reload=True):
+        return self._get_data(reload=reload)
 
     data = property(get_data, set_data)
 
     def _set_file(self, file):
+        if not os.path.exists(file):
+            raise FileNotFoundError(file)
         if self.check_timestamp:
-            if os.path.exists(file):
-                self.timestamp = os.path.getmtime(file)
+            self._timestamp = os.path.getmtime(file)
+        if self.check_filesize:
+            self._file_size = os.path.getsize(file)
         self._file = file
 
     def _get_file(self):
@@ -131,19 +142,14 @@ class AbstractJsonDict:
 
     def read(self, file):
         if VERBOSE:
-            print("read file",file)
+            print("read file", file)
         with open(file) as f:
             self.data = json.loads(f.read())
+        self._timestamp = os.path.getmtime(file)
+        self._file_size = os.path.getsize(file)
 
-    def get(self, *args, default=None, autosave=True):
-        if self.check_timestamp:
-            if self.file:
-                if os.path.getmtime(self.file) > self.timestamp:
-                    if VERBOSE:
-                        print("relaod file", self.file)
-                    self.read(self.file)
-
-        d = self.data
+    def get(self, *args, default=None, autosave=True, as_json_dict=True, reload=True):
+        d = self.get_data(reload=reload)
         args = [str(arg) for arg in args]
         for arg in args[:-1]:
             arg = str(arg)
@@ -153,27 +159,24 @@ class AbstractJsonDict:
                 return default
             d = d[arg]
 
-
         if args[-1] not in d and autosave:
-            self.put(*args, value=default, autosave=autosave)
+            self.put(*args, value=default, autosave=autosave, reload=False)
         if args[-1] not in d:
             return default
 
         o = d[args[-1]]
+
+        if isinstance(o, dict) and as_json_dict:
+            return self.getsubdict(*args)
         try:
             o = copy.deepcopy(o)
         except:
             pass
         return o
 
-    def put(self, *args, value, autosave=True):
-        if self.check_timestamp:
-            if self.file:
-                if os.path.getmtime(self.file) > self.timestamp:
-                    if VERBOSE:
-                        print("relaod file", self.file)
-                    self.read(self.file)
-        d = self.data
+    def put(self, *args, value, autosave=True, reload=True):
+        d = self.get_data(reload=reload)
+
         for arg in args[:-1]:
             arg = str(arg)
             if arg not in d:
@@ -199,30 +202,42 @@ class AbstractJsonDict:
         assert self.file is not None, "no file specified"
         if self.file is not None:
             if VERBOSE:
-                print("save file",self.file)
+                print("save file", self.file)
             with open(self.file, "w+") as outfile:
                 self.stringify_keys()
-                outfile.write(self.to_json(indent=4, sort_keys=True))
+                self.to_json_stream(outfile,reload=False, indent=4, sort_keys=True)
             if self.backup:
-                copyfile(self.file,  self.file + "_bu")
+                copyfile(self.file, self.file + "_bu")
             if self.check_timestamp:
-                self.timestamp = os.path.getmtime(self.file)
+                self._timestamp = os.path.getmtime(self.file)
+            if self.check_filesize:
+                self._file_size = os.path.getsize(self.file)
 
     def __getitem__(self, key):
-        return self.data.get(key)
+        return self.data[key]
 
     def stringify_keys(self, diction=None):
         if diction is None:
-            diction = self.data
+            diction = self.get_data(reload=False)
         for k in list(diction.keys()):
             if isinstance(diction[k], dict):
                 self.stringify_keys(diction=diction[k])
             diction[str(k)] = diction.pop(k)
 
-    def to_json(self, indent=None, sort_keys=False):
+    def to_json_string(self, reload=True, cls=None, **kwargs):
+        if cls is None:
+            cls = self.encoder
         return json.dumps(
-            self.data, cls=self.encoder, indent=indent, sort_keys=sort_keys
+            self.get_data(reload=reload), cls=cls, **kwargs
         )
+
+    def to_json_stream(self, fp, reload=True, cls=None, **kwargs):
+        if cls is None:
+            cls = self.encoder
+        return json.dump(self.get_data(reload=reload), fp, cls=cls, **kwargs)
+
+    def to_json(self, *args, **kwargs, ):
+        return self.to_json_string(*args, **kwargs)
 
     def get_base_dict(self):
         return self.get_parent(highest=True)
@@ -232,18 +247,23 @@ class AbstractJsonDict:
             return self.parent
         return self.parent.get_parent(highest=highest)
 
-    def getsubdict(self, preamble=None):
+    def getsubdict(self, preamble=None, *args):
         if preamble is None:
             preamble = []
+        if isinstance(preamble, tuple):
+            preamble = list(preamble)
+        if not isinstance(preamble, list):
+            preamble = [preamble]
+        preamble = preamble + list(args)
         return JsonSubDict(parent=self, preamble=preamble)
 
     def __str__(self):
-        return self.to_json()
+        return self.to_json_string()
 
 
 class JsonDict(AbstractJsonDict):
     def __init__(
-        self, file=None, data=None, createfile=True, autosave=True, *args, **kwargs,
+            self, file=None, data=None, createfile=True, autosave=True, *args, **kwargs,
 
     ):
         if data is not None:
@@ -251,6 +271,9 @@ class JsonDict(AbstractJsonDict):
                 data = json.loads(data)
             elif isinstance(data, JsonDict):
                 data = data.data
+
+        self._timestamp = 0
+        self._file_size = 0
         super().__init__(data=data, autosave=autosave, *args, **kwargs)
 
         if file is not None:
@@ -262,10 +285,10 @@ class JsonDict(AbstractJsonDict):
         try:
             super().read(file)
             self.file = os.path.abspath(file)
+            self.timestamp = os.path.getmtime(file)
         except JSONDecodeError:
-            super().read(file+"_bu")
-            self.file = os.path.abspath(file)
-        except (FileNotFoundError,JSONDecodeError) as e:
+            self.read(file + "_bu", createfile=False)
+        except (FileNotFoundError, JSONDecodeError) as e:
             if createfile:
                 os.makedirs(os.path.dirname(file), exist_ok=True)
                 self.save(file=file)
@@ -280,6 +303,9 @@ class JsonDict(AbstractJsonDict):
 
     def save(self, file=None):
         if file is not None:
+            os.makedirs(os.path.dirname(file), exist_ok=True)
+            with open(self.file, "r+") as outfile:
+                pass
             self.file = os.path.abspath(file)
         super().save()
 
@@ -292,8 +318,8 @@ class JsonSubDict(AbstractJsonDict):
         assert isinstance(data, dict), "data is not a dictionary"
         self.parent.put(*self.preamble, value=data)
 
-    def _get_data(self):
-        return self.parent.get(*self.preamble, default={})
+    def _get_data(self, reload=True):
+        return self.parent.get(*self.preamble, default={}, as_json_dict=False, reload=reload)
 
     def _get_file(self):
         return self.parent.get_file()
@@ -315,15 +341,23 @@ class JsonSubDict(AbstractJsonDict):
             preamble = [preamble]
         self.preamble = preamble
         self.parent = parent
-        self.parent.get(*self.preamble, default={})
+        self.parent.get(*self.preamble, default={}, as_json_dict=False)
 
-    def get(self, *args, default=None, autosave=True):
+    @property
+    def _timestamp(self):
+        return self.parent._timestamp
+
+    @property
+    def _file_size(self):
+        return self.parent._file_size
+
+    def get(self, *args, **kwargs):
         return self.parent.get(
-            *(self.preamble + list(args)), default=default, autosave=autosave
+            *(self.preamble + list(args)), **kwargs
         )
 
-    def put(self, *args, value):
-        self.parent.put(*(self.preamble + list(args)), value=value)
+    def put(self, *args, value, **kwargs):
+        return self.parent.put(*(self.preamble + list(args)), value=value, **kwargs)
 
 
 if __name__ == "__main__":
