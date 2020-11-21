@@ -2,7 +2,7 @@ import setuptools
 
 setup = dict(
     name="Json_Dict",
-    version="0.2",
+    version="0.3",
     author="Julian Kimmig",
     author_email="julian-kimmig@gmx.net",
     description="Store data in JSON format",
