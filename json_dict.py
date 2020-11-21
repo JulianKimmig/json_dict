@@ -153,7 +153,6 @@ class AbstractJsonDict:
         d = self.get_data(reload=reload)
         args = [str(arg) for arg in args]
         for arg in args[:-1]:
-            arg = str(arg)
             if arg not in d and autosave:
                 d[arg] = {}
             if arg not in d:
@@ -179,9 +178,8 @@ class AbstractJsonDict:
 
     def put(self, *args, value, autosave=True, reload=True):
         d = self.get_data(reload=reload)
-
+        args = [str(arg) for arg in args]
         for arg in args[:-1]:
-            arg = str(arg)
             if arg not in d:
                 d[arg] = {}
             d = d[arg]

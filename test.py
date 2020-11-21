@@ -1,5 +1,6 @@
 import os
 import tempfile
+import time
 import unittest
 
 import json_dict
@@ -57,6 +58,15 @@ class DictTest(unittest.TestCase):
         assert l.pop(-1) == 0
         assert all([l[i]==k for i,k in enumerate([2,10])]), str(l)
 
+    def test_time(self):
+        t=time.time()
+        json_dict.VERBOSE=False
+        d=1000
+        for i in range(d):
+            self.d.put("second_entry",value=self.d.get("second_entry",default=0)+1)
+        print(time.time()-t)
+        assert self.d.get("second_entry",default=1) == d
+        json_dict.VERBOSE=True
 
 if __name__ == '__main__':
     unittest.main()
