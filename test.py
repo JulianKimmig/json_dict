@@ -68,5 +68,16 @@ class DictTest(unittest.TestCase):
         assert self.d.get("second_entry",default=1) == d
         json_dict.VERBOSE=True
 
+    def test_empty_key(self):
+        dic={"data": {
+            "": {
+                "inempty": [
+                    "test"
+                ],
+            }}}
+        self.d.data=dic
+        ds=JsonDict(self.d.file)
+        print(ds)
+
 if __name__ == '__main__':
     unittest.main()
