@@ -38,8 +38,9 @@ class JsonMultiEncoder(json.JSONEncoder):
 
 class AbstractJsonDict:
     def __init__(self, data=None, autosave=False, encoder=JsonMultiEncoder, backup=True, check_timestamp=True,
-                 check_filesize=True):
+                 check_filesize=True,default_as_json_dict=True):
 
+        self.default_as_json_dict = default_as_json_dict
         self.check_filesize = check_filesize
         self.check_timestamp = check_timestamp
         if encoder is None:
@@ -151,7 +152,9 @@ class AbstractJsonDict:
         self._timestamp = os.path.getmtime(file)
         self._file_size = os.path.getsize(file)
 
-    def get(self, *args, default=None, autosave=True, as_json_dict=True, reload=True):
+    def get(self, *args, default=None, autosave=True, as_json_dict=None, reload=True):
+        if as_json_dict is None:
+            as_json_dict=self.default_as_json_dict
         d = self.get_data(reload=reload)
         args = [str(arg) for arg in args]
         for arg in args[:-1]:
