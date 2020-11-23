@@ -55,8 +55,10 @@ class AbstractJsonDict:
         if autosave:
             self.autosave = autosave
 
-    def _set_data(self, data):
+    def _set_data(self, data,save=True):
         self._data = data
+        if save and self.file:
+            self.save()
 
     def _get_data(self, reload=True):
         if self.file and reload:
@@ -85,8 +87,8 @@ class AbstractJsonDict:
         if self.autosave and autosave:
             self.save()
 
-    def set_data(self, data):
-        self._set_data(data)
+    def set_data(self, data,save=True):
+        self._set_data(data,save=save)
 
     def get_data(self, reload=True):
         return self._get_data(reload=reload)
@@ -278,8 +280,10 @@ class JsonDict(AbstractJsonDict):
         super().__init__(data=data, autosave=autosave, *args, **kwargs)
 
         if file is not None:
-            self.read(file, createfile=createfile)
-
+            if data is None:
+                self.read(file, createfile=createfile)
+            else:
+                self.save(file)
     def read(self, file, createfile=False):
         if file:
             file = os.path.abspath(file)
@@ -297,10 +301,10 @@ class JsonDict(AbstractJsonDict):
             else:
                 raise e
 
-    def _set_data(self, data, file=None):
-        if file is not None:
-            self.file = os.path.abspath(file)
-        super()._set_data(data)
+   # def _set_data(self, data, file=None,save=True):
+   #     if file is not None:
+   #         self.file = os.path.abspath(file)
+   #     super()._set_data(data,save=save)
 
     def save(self, file=None):
         if file is not None:
@@ -315,9 +319,9 @@ class JsonDict(AbstractJsonDict):
 
 
 class JsonSubDict(AbstractJsonDict):
-    def _set_data(self, data):
+    def _set_data(self, data,save=True):
         assert isinstance(data, dict), "data is not a dictionary"
-        self.parent.put(*self.preamble, value=data)
+        self.parent.put(*self.preamble, value=data,autosave=save)
 
     def _get_data(self, reload=True):
         return self.parent.get(*self.preamble, default={}, as_json_dict=False, reload=reload)
