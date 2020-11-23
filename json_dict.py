@@ -312,7 +312,7 @@ class JsonDict(AbstractJsonDict):
     def save(self, file=None):
         if file is not None:
             os.makedirs(os.path.dirname(file), exist_ok=True)
-            with open(self.file, "r+") as outfile:
+            with open(file, "r+") as outfile:
                 pass
             self.file = os.path.abspath(file)
         super().save()
