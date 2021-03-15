@@ -343,7 +343,7 @@ class JsonSubDict(AbstractJsonDict):
         self.parent.save()
 
     def __init__(self, parent, preamble):
-        super().__init__()
+        super().__init__(default_as_json_dict=parent.default_as_json_dict)
         if isinstance(preamble, tuple):
             preamble = list(preamble)
         if not isinstance(preamble, list):
